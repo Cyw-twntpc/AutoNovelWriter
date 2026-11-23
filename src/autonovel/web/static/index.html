@@ -1,0 +1,1038 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>長篇小說全自動寫作工具 — iOS 淺色液態玻璃工作室</title>
+    <style id="liquid-glass-critical">
+        :root {
+            --bg-canvas: #e6effd;
+            --text-main: #0f172a;
+            --text-secondary: #334155;
+            --text-muted: #64748b;
+            --accent-blue: #0066ff;
+            --accent-indigo: #5856d6;
+            --accent-green: #10b981;
+            --accent-orange: #f59e0b;
+            --accent-red: #ef4444;
+        }
+        body {
+            background-color: var(--bg-canvas);
+            color: var(--text-main);
+        }
+    </style>
+    <link id="main-liquid-stylesheet" rel="stylesheet" href="/static/styles.css?v=ios-liquid-v7" />
+</head>
+<body id="liquid-glass-v3-marker">
+    <!-- Vibrant Light-Mode iOS 26 Aurora Wallpaper for Glass Refraction -->
+    <div class="ambient-bg" aria-hidden="true">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+        <div class="blob blob-4"></div>
+    </div>
+
+    <!-- Macro Layout: Left Non-Scrolling iOS Liquid Glass Dock + Right Bento Workspace -->
+    <div class="ios-studio-shell">
+        <!-- Left Non-Scrolling Liquid Glass Navigation & Hardware Dock -->
+        <aside class="ios-liquid-sidebar">
+            <!-- Brand & Current Active Novel Status -->
+            <div class="dock-brand-card">
+                <span class="dock-sub-label">當前寫作小說</span>
+                <h1 id="top-novel-title" class="dock-novel-title">長篇小說全自動寫作工具</h1>
+                <div class="pipeline-status-row">
+                    <span class="pipeline-status-dot"></span>
+                    <span id="top-pipeline-badge" class="pipeline-status-text" data-state="WIZARD">目前狀態：創世問答設定中</span>
+                </div>
+            </div>
+
+            <!-- Vertical Main System Navigation -->
+            <nav class="dock-stage-nav" aria-label="主要頁面切換">
+                <div class="dock-section-label">系統功能導航</div>
+                <button id="nav-btn-projects" class="stage-pill active" onclick="switchMainView('projects')">
+                    <span class="step-num">📚</span>
+                    <div class="stage-pill-text">
+                        <strong>小說管理中心</strong>
+                        <small>多作品庫與進度儀表</small>
+                    </div>
+                </button>
+                <button id="nav-btn-studio" class="stage-pill" onclick="switchMainView('studio')">
+                    <span class="step-num">🖋️</span>
+                    <div class="stage-pill-text">
+                        <strong>創作工作室</strong>
+                        <small>問答、藍圖與連載寫作</small>
+                    </div>
+                </button>
+            </nav>
+
+            <!-- Always-On Hardware & Telemetry Mini Bento Widget (Pinned to Bottom) -->
+            <div class="dock-telemetry-pod dock-pinned-bottom">
+                <div class="dock-pod-header">
+                    <span id="hw-device-label" class="dock-section-label">GPU 實時硬體監控</span>
+                    <span id="total-words-badge" class="word-count-pill">0 字</span>
+                </div>
+                <div class="dock-gauge-item">
+                    <div class="gauge-top">
+                        <span class="gauge-label">VRAM負載</span>
+                        <strong id="hw-vram">-- / -- GB</strong>
+                    </div>
+                    <div class="mini-progress-track">
+                        <div id="hw-vram-bar" class="mini-progress-fill fill-blue" style="width: 0%;"></div>
+                    </div>
+                </div>
+                <div class="dock-gauge-item">
+                    <div class="gauge-top">
+                        <span class="gauge-label">GPU 核心溫度</span>
+                        <strong id="hw-temp">-- °C</strong>
+                    </div>
+                    <div class="mini-progress-track">
+                        <div id="hw-temp-bar" class="mini-progress-fill fill-green" style="width: 0%;"></div>
+                    </div>
+                </div>
+                <div class="dock-mini-metrics">
+                    <div class="mini-metric-chip">
+                        <span>速度</span>
+                        <strong id="hw-tps">-- 字/秒</strong>
+                    </div>
+                    <div class="mini-metric-chip">
+                        <span>耗時</span>
+                        <strong id="hw-duration">-- 秒</strong>
+                    </div>
+                    <div class="mini-metric-chip">
+                        <span>均分</span>
+                        <strong id="hw-avg-score">-- 分</strong>
+                    </div>
+                    <div class="mini-metric-chip">
+                        <span>防眠</span>
+                        <strong id="hw-sleep-lock">待命</strong>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Right Main Floating Stage Area -->
+        <section class="ios-main-stage">
+            <!-- Top Floating Liquid Glass Utility Bar (Global System & Reference Hub Tools) -->
+            <header class="ios-top-utility-bar">
+                <div class="utility-bar-group">
+                    <span class="utility-group-tag">系統核心與知識庫</span>
+                    <button class="btn btn-sm btn-glass" onclick="openEnvModal()">⚙️ 環境與模型</button>
+                    <button id="btn-top-unload-model" class="btn btn-sm btn-glass btn-glass-warn" onclick="unloadModelAndPauseJobs()" title="一鍵卸載模型以釋放 GPU 顯存 (VRAM)，並安全暫停所有背景工作">🛑 一鍵卸載模型</button>
+                    <button class="btn btn-sm btn-glass" onclick="openReferenceModal()">📚 參考書庫與標籤中心</button>
+                    <button id="btn-toggle-theme" class="btn btn-sm btn-glass" onclick="toggleDarkTheme()" title="切換深色/淺色主題">🌙 深色模式</button>
+                    <span id="ref-progress-pill" class="ref-pill hidden">書庫條目：0 則</span>
+                </div>
+                <div class="utility-bar-group" id="top-bar-studio-actions">
+                    <button id="btn-pause-resume" class="btn btn-primary btn-sm hidden" onclick="togglePauseResume()">
+                        ▶ 啟動連載
+                    </button>
+                </div>
+            </header>
+
+            <!-- ==================== VIEW 0: NOVEL PROJECTS HUB ==================== -->
+            <main id="view-projects" class="stage-view">
+                <div class="projects-bento-shell">
+                    <div class="card projects-summary-card">
+                        <div class="ribbon-header">
+                            <div>
+                                <span class="eyebrow-tag">NOVEL PROJECTS HUB</span>
+                                <h2>長篇小說專案管理中心</h2>
+                                <p class="muted-text">獨立管理多部小說作品。隨時切換、續寫、重新命名或匯出發行。</p>
+                            </div>
+                            <div class="inline-btn-group">
+                                <button class="btn btn-primary btn-lg" onclick="openNewProjectModal()">＋ 創建全新小說</button>
+                            </div>
+                        </div>
+                        <div class="projects-kpi-strip">
+                            <div class="mini-kpi-chip">
+                                <span>全庫小說總數</span>
+                                <strong id="kpi-total-projects">0 本</strong>
+                            </div>
+                            <div class="mini-kpi-chip">
+                                <span>累計創作字數</span>
+                                <strong id="kpi-total-words">0 字</strong>
+                            </div>
+                            <div class="mini-kpi-chip">
+                                <span>當前激活寫作</span>
+                                <strong id="kpi-active-title">載入中...</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="projects-grid-container" class="projects-grid"></div>
+                </div>
+            </main>
+
+            <!-- ==================== VIEW: CREATIVE STUDIO (CONTAINS WIZARD, REVIEW, WARROOM) ==================== -->
+            <main id="view-studio" class="stage-view hidden">
+                <div class="studio-workspace-shell">
+                    <div class="card studio-header-bar">
+                        <div class="studio-subtabs" aria-label="工作室創作階段">
+                            <button id="step-pill-wizard" class="studio-subtab active" onclick="selectStageDirect('WIZARD')">
+                                <span class="subtab-num">01</span>
+                                <span>創世問答精靈</span>
+                            </button>
+                            <button id="step-pill-review" class="studio-subtab" onclick="selectStageDirect('REVIEW_GATE')">
+                                <span class="subtab-num">02</span>
+                                <span>藍圖審核工作台</span>
+                            </button>
+                            <button id="step-pill-warroom" class="studio-subtab" onclick="selectStageDirect('RUNNING')">
+                                <span class="subtab-num">03</span>
+                                <span>連載戰情室</span>
+                            </button>
+                        </div>
+                        <div class="studio-action-controls">
+                            <div class="inline-btn-group" style="margin-left: auto;">
+                                <button id="btn-manual-snapshot" class="btn btn-sm btn-glass" onclick="createManualSnapshot()">📌 手動存快照</button>
+                                <button id="btn-open-snapshots" class="btn btn-sm btn-glass" onclick="openSnapshotModal()">⏪ 快照與回滾</button>
+                                <button id="btn-top-export" class="btn btn-sm btn-primary" onclick="openExportModal()">📤 多格式匯出</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="studio-stage-content">
+                        <!-- ==================== STAGE 1: WIZARD STUDIO ==================== -->
+                        <div id="view-wizard" class="studio-stage-pane">
+                <div class="wizard-bento-shell">
+                    <!-- STEP 01 ONLY: Foundation Genre & Multi-Sub-Genre Setup (Shown First) -->
+                    <section id="wizard-step1-panel" class="card wizard-step1-card">
+                        <div class="ribbon-header">
+                            <div>
+                                <span class="eyebrow-tag">第 1 步：基礎題材與字數設定</span>
+                                <h2>題材設定與目標字數鎖定</h2>
+                                <p class="muted-text">於參考書庫中心匯入典範小說後，系統會自動萃取技法並依語意密度擴充主題材與子題材；子題材支援直接點擊多選（反轉色代表已選取）。</p>
+                            </div>
+                        </div>
+                        <div class="step1-top-fields">
+                            <label>小說書名（選填，可交由 AI 命名）
+                                <input type="text" id="wiz-title" placeholder="留空將由 AI 自動命名" />
+                            </label>
+                            <label>主題材分類（含書庫自動擴充題材）
+                                <select id="wiz-genre-primary" onchange="onPrimaryGenreChange()"></select>
+                            </label>
+                            <label>目標保底總字數（下限 10 萬字）
+                                <input type="number" id="wiz-min-words" value="5000000" min="100000" step="100000" />
+                            </label>
+                        </div>
+                        <div class="step1-subgenre-section">
+                            <span class="subgenre-label">子題材流派（可直接點擊複選，顏色反轉代表選取）：</span>
+                            <div id="wiz-genre-sub" class="options-grid sub-genre-strip"></div>
+                        </div>
+                        <div class="step1-bottom-row">
+                            <label style="flex: 1;">自訂補充流派或融合元素（選填，將與上方複選子題材合併）
+                                <input type="text" id="wiz-genre-custom" value="" />
+                            </label>
+                            <button id="wiz-btn-start" class="btn btn-primary btn-lg" onclick="submitGenreSetup()">
+                                鎖定題材設定 → 進入 Step 2 由 AI 衍生問答
+                            </button>
+                        </div>
+                    </section>
+
+                    <!-- STEP 02 ONLY: AI Infinite-Depth Q&A & Decision Timeline (Hidden Until Step 1 Locked) -->
+                    <div id="wizard-step2-panel" class="wizard-step2-shell hidden">
+                        <div class="card step2-summary-ribbon">
+                            <div class="step2-summary-info">
+                                <span class="eyebrow-tag">已鎖定基礎設定</span>
+                                <strong id="step2-locked-summary">已鎖定題材設定</strong>
+                            </div>
+                            <button class="btn btn-sm btn-glass" onclick="showWizardStep(1)">
+                                ← 返回 Step 1 修改題材與字數
+                            </button>
+                        </div>
+
+                        <div class="wizard-split-workspace">
+                            <section class="card wizard-qa-studio">
+                                <div class="qa-studio-header">
+                                    <div class="qa-studio-top-bar">
+                                        <span class="eyebrow-tag">第 2 步：逐層深挖設定與文風節奏</span>
+                                        <div class="inline-btn-group">
+                                            <span id="qa-engine-mode-badge" class="engine-mode-pill">● 檢測引擎中...</span>
+                                            <span id="qa-question-aspect" class="aspect-badge">敘事文風與推進節奏</span>
+                                            <button class="btn btn-sm btn-glass" onclick="regenerateCurrentQuestion()">
+                                                ↻ AI 重新生成本層選項
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <h2 id="qa-question-title" class="qa-fullwidth-title">載入問答中...</h2>
+                                </div>
+
+                                <div id="contradiction-banner" class="alert-danger hidden"></div>
+
+                                <div id="qa-options-box" class="options-grid qa-vertical-options"></div>
+
+                                <div class="qa-Bottom-Area">
+                                    <label>自訂補充說明（選填，宏觀設定偏好）：
+                                        <input type="text" id="qa-custom-note" placeholder="例如：偏向道法自然與心境歷練，著重宗門利益拉扯..." />
+                                    </label>
+
+                                    <!-- 答題進度指標 (滿 10 題解鎖藍圖建構) -->
+                                    <div class="qa-progress-container" id="qa-progress-container">
+                                        <div class="qa-progress-labels">
+                                            <span id="qa-progress-text">問答累積深度：0 / 10 題</span>
+                                            <span id="qa-progress-hint" class="qa-progress-hint">滿 10 題即可進入下一階段開始建構藍圖</span>
+                                        </div>
+                                        <div class="qa-progress-bar">
+                                            <div id="qa-progress-fill" class="qa-progress-fill" style="width: 0%;"></div>
+                                        </div>
+                                    </div>
+
+                                    <!-- 常規問答操作欄 -->
+                                    <div class="qa-action-Dock">
+                                        <button id="btn-submit-wizard" class="btn btn-primary btn-lg" onclick="submitWizardAnswer()">
+                                            下一題
+                                        </button>
+                                        <button id="btn-autocomplete-qa" class="btn btn-accent btn-lg" onclick="triggerAutoQALoop(7)">
+                                            🤖 AI 補全（推進 7 題）
+                                        </button>
+                                    </div>
+
+                                    <!-- 通關按鈕：>= 10 題時顯著高亮展現 -->
+                                    <div id="qa-blueprint-unlock-area" class="qa-blueprint-unlock-area hidden">
+                                        <button id="btn-finish-wizard" class="btn btn-gold-epic btn-lg full-width" onclick="finishWizardAndBuildBlueprint()">
+                                            ✨ 進入下一階段：開始建構藍圖與風格契約
+                                        </button>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <aside class="card wizard-timeline-drawer">
+                                <div class="panel-header">
+                                    <div>
+                                        <span class="eyebrow-tag">DECISION TIMELINE</span>
+                                        <h3>已鎖定設定決策樹</h3>
+                                    </div>
+                                </div>
+                                <p class="muted-text" style="margin-bottom:0.6rem;">點擊任一層級可無損回溯修改並重新延伸後續問答：</p>
+                                <ul id="qa-history-list" class="qa-tree-list"></ul>
+                            </aside>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- /#view-wizard -->
+
+            <!-- ==================== STAGE 2: REVIEW GATE WORKBENCH ==================== -->
+            <div id="view-review" class="studio-stage-pane hidden">
+                    <div class="review-bento-shell">
+                    <!-- Sticky Floating Glass Command Header -->
+                    <div class="card review-command-bar">
+                        <div>
+                            <span class="eyebrow-tag">BLUEPRINT & CONTRACT GATE</span>
+                            <h2>連載前設定與《風格契約書》審核工作台</h2>
+                            <p class="muted-text">所有欄位皆可自由增刪修改，或針對單一分頁局部重抽，確認無誤後即可鎖定啟動連載。</p>
+                        </div>
+                        <div class="review-header-actions">
+                            <button class="btn btn-glass" onclick="saveReviewChanges()">💾 儲存全部修改</button>
+                            <button id="btn-review-lock-start" class="btn btn-accent btn-lg" onclick="lockReviewAndStart()">
+                                🚀 鎖定《風格契約書》並啟動全自動連載
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Segmented iOS Glass Tab Bar -->
+                    <div class="card review-tabs-card">
+                        <div class="tab-bar">
+                            <button class="tab-btn active" onclick="switchReviewTab('tab-world')">🌍 1. 世界觀與階級序列</button>
+                            <button class="tab-btn" onclick="switchReviewTab('tab-chars')">👥 2. 角色檔案與勢力地圖</button>
+                            <button class="tab-btn" onclick="switchReviewTab('tab-outline')">📑 3. 全書大綱與首卷細綱</button>
+                            <button class="tab-btn" onclick="switchReviewTab('tab-style')">✒️ 4. 風格契約與雙錨點</button>
+                            <button class="tab-btn" onclick="switchReviewTab('tab-blacklist')">🛡️ 5. 三層禁用詞黑名單</button>
+                        </div>
+
+                        <div id="tab-world" class="tab-pane">
+                            <div class="tab-pane-header">
+                                <h3>世界觀核心鐵律（每行一條）</h3>
+                                <button class="btn btn-sm btn-glass" onclick="regenerateReviewSection('world')">↻ 局部重抽本分頁</button>
+                            </div>
+                            <textarea id="rev-world-rules" rows="5"></textarea>
+                            <div class="tab-pane-header" style="margin-top:0.85rem;">
+                                <h3>境界／職階嚴格序列（防止戰力通膨與跨階混亂）</h3>
+                                <button class="btn btn-sm btn-primary" onclick="addHierarchyRow()">＋ 新增階級序列</button>
+                            </div>
+                            <div id="rev-hierarchy-table" class="structured-list-box"></div>
+                        </div>
+
+                        <div id="tab-chars" class="tab-pane hidden">
+                            <div class="tab-pane-header">
+                                <h3>核心與配角結構化檔案（支援別名、境界、勢力與初始地點）</h3>
+                                <div class="inline-btn-group">
+                                    <button class="btn btn-sm btn-primary" onclick="addCharacterCard()">＋ 新增角色卡</button>
+                                    <button class="btn btn-sm btn-glass" onclick="regenerateReviewSection('characters')">↻ 局部重抽角色與勢力</button>
+                                </div>
+                            </div>
+                            <div id="rev-characters-list" class="structured-list-box"></div>
+                            <div class="two-col-grid" style="margin-top:0.9rem;">
+                                <div class="glass-subcard">
+                                    <h4>勢力列表（每行一個勢力名稱）</h4>
+                                    <textarea id="rev-factions-list" rows="5"></textarea>
+                                </div>
+                                <div class="glass-subcard">
+                                    <h4>地圖地點列表（每行一個地點名稱）</h4>
+                                    <textarea id="rev-locations-list" rows="5"></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="tab-outline" class="tab-pane hidden">
+                            <div class="tab-pane-header">
+                                <h3>全書配速閘門與第一卷前 10 章精細節拍</h3>
+                                <button class="btn btn-sm btn-glass" onclick="regenerateReviewSection('outline')">↻ 局部重抽大綱與節拍</button>
+                            </div>
+                            <div class="two-col-grid">
+                                <label>黃金開篇三章計畫
+                                    <textarea id="rev-opening-plan" rows="3"></textarea>
+                                </label>
+                                <label>終局收束草案
+                                    <textarea id="rev-ending-draft" rows="3"></textarea>
+                                </label>
+                            </div>
+                            <div class="tab-pane-header" style="margin-top:0.85rem;">
+                                <h4>全書階段配速閘門（視覺化階段卡片，鎖定字數佔比、境界上限與核心伏筆）</h4>
+                                <button class="btn btn-sm btn-primary" onclick="addStageGateCard()">＋ 新增階段卡片</button>
+                            </div>
+                            <div id="rev-stage-gates-container" class="rev-stage-grid"></div>
+                            <textarea id="rev-stage-gates-json" class="hidden"></textarea>
+
+                            <h4 style="margin-top:0.95rem;">第一卷前 10 章逐章分鏡細綱（可逐章編輯標題與場景節拍）</h4>
+                            <div id="rev-outline-box" class="structured-list-box"></div>
+                        </div>
+
+                        <div id="tab-style" class="tab-pane hidden">
+                            <div class="tab-pane-header">
+                                <h3>《風格契約書》與雙錨點防漂移設定</h3>
+                                <button class="btn btn-sm btn-glass" onclick="regenerateReviewSection('style')">↻ 局部重抽風格契約</button>
+                            </div>
+                            <div class="two-col-grid">
+                                <label>《風格契約書》（視角、句長、描寫密度、對話比例）
+                                    <textarea id="rev-style-contract" rows="9"></textarea>
+                                </label>
+                                <label>靜態基準錨點段落（300~500 字繁中示範段落，永久注入每章 Context）
+                                    <textarea id="rev-static-anchor" rows="9"></textarea>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div id="tab-blacklist" class="tab-pane hidden">
+                            <div class="tab-pane-header">
+                                <h3>三層可配置禁用詞黑名單（每行一詞）</h3>
+                                <button class="btn btn-sm btn-glass" onclick="regenerateReviewSection('blacklist')">↻ 重設預設黑名單</button>
+                            </div>
+                            <div class="blacklist-columns">
+                                <div class="glass-subcard tier-card-1">
+                                    <h4>第一層：全題材通用 AI 陳腔濫調</h4>
+                                    <textarea id="rev-bl-tier1" rows="11"></textarea>
+                                </div>
+                                <div class="glass-subcard tier-card-2">
+                                    <h4>第二層：題材專屬時代／世界觀違背詞</h4>
+                                    <textarea id="rev-bl-tier2" rows="11"></textarea>
+                                </div>
+                                <div class="glass-subcard tier-card-3">
+                                    <h4>第三層：使用者自訂禁用詞</h4>
+                                    <textarea id="rev-bl-tier3" rows="11"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- /#view-review -->
+
+            <!-- ==================== STAGE 3: REDESIGNED WAR ROOM STUDIO ==================== -->
+            <div id="view-warroom" class="studio-stage-pane hidden">
+                    <div class="warroom-bento-layout">
+                    <!-- Top Horizontal Telemetry & ECG Bento Strip -->
+                    <div class="warroom-top-strip">
+                        <section class="card warroom-ecg-card">
+                            <div class="compact-header">
+                                <div>
+                                    <span class="eyebrow-tag">3D PACING TELEMETRY</span>
+                                    <h3>近 30 章三維張力心電圖（ECG）</h3>
+                                </div>
+                                <div class="ecg-legend">
+                                    <span class="leg-tension">● 衝突強度</span>
+                                    <span class="leg-progress">● 目標推進</span>
+                                    <span class="leg-payoff">● 情緒爽感</span>
+                                </div>
+                            </div>
+                            <canvas id="tension-ecg-canvas" width="560" height="128"></canvas>
+                        </section>
+
+                        <section class="card warroom-anomaly-card">
+                            <div class="compact-header">
+                                <div>
+                                    <span class="eyebrow-tag">QUALITY & FORESHADOW MONITOR</span>
+                                    <h3>異常警報與伏筆超期紀錄</h3>
+                                </div>
+                                <button class="btn btn-sm btn-glass" onclick="openAcceptanceModal()">📋 驗收指標</button>
+                            </div>
+                            <div id="anomaly-log-list" class="anomaly-list"></div>
+                        </section>
+                    </div>
+
+                    <!-- Bottom Main Editorial Split: Left Chapter Drawer (295px) + Wide Center Manuscript Studio (1fr) -->
+                    <div class="warroom-editorial-split">
+                        <aside class="card warroom-outline-drawer">
+                            <div class="panel-header">
+                                <div>
+                                    <span class="eyebrow-tag">OUTLINE TREE</span>
+                                    <h3>分卷大綱與進度燈號</h3>
+                                </div>
+                            </div>
+                            <div id="outline-tree-container" class="outline-tree"></div>
+                        </aside>
+
+                        <section class="card warroom-reader-studio">
+                            <div class="panel-header">
+                                <div>
+                                    <span class="eyebrow-tag">LIVE MANUSCRIPT READER</span>
+                                    <h3 id="reader-chapter-title">請從左側選擇章節或等待連載推進...</h3>
+                                </div>
+                                <div class="reader-controls">
+                                    <button id="btn-step-once" class="btn btn-accent btn-sm" onclick="triggerSingleStep()">⚡ 單步寫下一章</button>
+                                    <button id="btn-warroom-rewrite" class="btn btn-sm btn-warn" onclick="openRewriteModal()">✍️ 重寫最新章</button>
+                                    <button class="btn btn-sm btn-glass" onclick="adjustReaderFontSize(-0.08)">A-</button>
+                                    <button class="btn btn-sm btn-glass" onclick="adjustReaderFontSize(0.08)">A+</button>
+                                    <button id="btn-paper-mode" class="btn btn-sm btn-glass" onclick="toggleReaderPaperMode()">📜 宣紙護眼</button>
+                                </div>
+                            </div>
+                            <div id="rubric-score-card" class="score-card hidden"></div>
+                            <article id="chapter-content-viewer" class="novel-reader-pane">
+                                尚未載入章節正文。您可點擊左側大綱樹任一章節檢視，或點擊上方「⚡ 單步寫下一章」立即體驗全自動生成。
+                            </article>
+                        </section>
+                    </div>
+                </div>
+            </div>
+            <!-- /#view-warroom -->
+        </div>
+        <!-- /.studio-stage-content -->
+    </div>
+    <!-- /.studio-workspace-shell -->
+</main>
+<!-- /#view-studio -->
+</section>
+</div>
+
+    <!-- ==================== LIQUID GLASS MODALS ==================== -->
+
+    <!-- Modal 1: Rewrite Latest Chapter Confirmation -->
+    <div id="modal-rewrite" class="modal-backdrop hidden">
+        <div class="modal-card">
+            <div class="panel-header">
+                <div>
+                    <span class="eyebrow-tag">REWRITE LATEST CHAPTER</span>
+                    <h3>確認重寫最新完成章節</h3>
+                </div>
+                <button class="btn btn-sm btn-glass" onclick="closeModal('modal-rewrite')">✕</button>
+            </div>
+            <p class="muted-text">此操作將先把原正文備份至 <code>chapter_revisions_archive</code>，還原上一章記憶庫快照，並更換隨機種子重新生成最新一章。</p>
+            <div class="modal-actions">
+                <button class="btn btn-glass" onclick="closeModal('modal-rewrite')">取消</button>
+                <button class="btn btn-warn" onclick="confirmRewriteLatest()">確認重抽並重寫</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 2: Snapshot List & Rollback -->
+    <div id="modal-snapshots" class="modal-backdrop hidden">
+        <div class="modal-card modal-wide">
+            <div class="panel-header">
+                <div>
+                    <span class="eyebrow-tag">ATOMIC SNAPSHOT RESTORE</span>
+                    <h3>記憶庫與大綱時間點快照列表</h3>
+                </div>
+                <button class="btn btn-sm btn-glass" onclick="closeModal('modal-snapshots')">✕</button>
+            </div>
+            <div id="snapshot-list-box" class="snapshot-table-wrap"></div>
+        </div>
+    </div>
+
+    <!-- Modal 3: Reference Corpus Hub (Redesigned Dual-Tab) -->
+    <div id="modal-reference" class="modal-backdrop hidden">
+        <div class="modal-card modal-ultrawide">
+            <div class="panel-header">
+                <div>
+                    <span class="eyebrow-tag">REFERENCE CORPUS HUB</span>
+                    <h3>參考書庫與知識資產管理中心</h3>
+                </div>
+                <button class="btn btn-sm btn-glass" onclick="closeModal('modal-reference')">✕</button>
+            </div>
+
+            <!-- Segmented Control Tabs (4 Tabs) -->
+            <div class="ref-tabs-bar">
+                <button id="ref-tab-btn-ingest" class="ref-tab-btn active" onclick="switchRefTab('ingest')">📥 書庫匯入與即時進度</button>
+                <button id="ref-tab-btn-entries" class="ref-tab-btn" onclick="switchRefTab('entries')">📖 技法條目詳細檢視</button>
+                <button id="ref-tab-btn-assets" class="ref-tab-btn" onclick="switchRefTab('assets')">🌐 全庫標籤資產總覽</button>
+                <button id="ref-tab-btn-pacing" class="ref-tab-btn" onclick="switchRefTab('pacing')">📈 情節規劃範本庫</button>
+            </div>
+
+            <!-- Summary Stats Banner -->
+            <div id="ref-stats-banner" class="ref-stats-banner">
+                <span>📚 已入庫書籍：<strong id="ref-stat-books">0</strong> 本</span>
+                <span>📝 萃取技法條目：<strong id="ref-stat-entries">0</strong> 則</span>
+                <span>🏷️ 語意標籤：<strong id="ref-stat-tags">0</strong> 個</span>
+                <span>⚡ 向量引擎：<strong id="ref-stat-embedder">BGE-Small-ZH (CPU 零顯存)</strong></span>
+            </div>
+
+            <!-- TAB 1: Ingest & Progress -->
+            <div id="ref-tab-ingest" class="ref-tab-content">
+                <!-- File Upload & Pre-flight Subcard -->
+                <div class="glass-subcard">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.35rem; flex-wrap:wrap; gap:0.4rem;">
+                        <h4 style="margin:0;">上傳參考書籍（支援多次選檔累加佇列、自動 SHA-256 去重與零記憶體留存）</h4>
+                        <span class="muted-text">支援 .txt / .md / .epub / .docx。切片後立即銷毀正文。</span>
+                    </div>
+                    <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap; margin-bottom:0.45rem;">
+                        <input type="file" id="ref-file-input" multiple accept=".txt,.md,.epub,.docx" onchange="runReferenceUploadPreflight()" style="flex:1; min-width:220px;" />
+                        <div class="inline-btn-group" style="gap:0.35rem; flex-wrap:wrap;">
+                            <button type="button" class="btn btn-glass btn-xs" onclick="document.getElementById('ref-file-input').click()">➕ 繼續追加檔案</button>
+                            <button type="button" class="btn btn-glass btn-xs" onclick="applyBatchStagedAction('INGEST')">⚡ 全設為入庫/補齊</button>
+                            <button type="button" class="btn btn-glass btn-xs" onclick="applyBatchStagedAction('REEXTRACT')">↻ 全設為強制重萃</button>
+                            <button type="button" class="btn btn-glass btn-xs" onclick="clearStagedReferenceFiles()">🗑️ 清空清單</button>
+                        </div>
+                    </div>
+                    <div id="ref-staged-summary" class="muted-text" style="font-size:0.78rem; margin-bottom:0.35rem;">待萃取清單：0 本（可跨資料夾多次選取多部小說累加至清單，或於萃取進行中隨時追加新批次）</div>
+                    <div id="ref-preflight-results" class="snapshot-table-wrap">請選擇一個或多個參考書籍檔案...</div>
+                    <div class="ref-preflight-options" style="display:flex; gap:1.2rem; margin:0.6rem 0; padding:0.6rem 0.8rem; background:rgba(255,255,255,0.03); border-radius:8px; border:1px solid rgba(255,255,255,0.08); align-items:center; flex-wrap:wrap;">
+                        <span style="font-weight:600; font-size:0.85rem;">預設萃取軌道：</span>
+                        <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer; font-size:0.85rem;">
+                            <input type="checkbox" id="ref-opt-extract-skills" checked onchange="onGlobalTrackOptionChange()" />
+                            <span>✍️ 萃取寫作技能（2,500字切片、五感修辭與對話）</span>
+                        </label>
+                        <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer; font-size:0.85rem;">
+                            <input type="checkbox" id="ref-opt-extract-pacing" checked onchange="onGlobalTrackOptionChange()" />
+                            <span>📈 萃取情節規劃（全書目錄骨幹、波浪起伏與張力範本）</span>
+                        </label>
+                        <div style="display:flex; align-items:center; gap:0.4rem; margin-left:auto;">
+                            <span class="muted-text" style="font-size:0.8rem;">動態擾動率：</span>
+                            <input type="range" id="ref-pacing-jitter-slider" min="0" max="0.25" step="0.05" value="0.0" style="width:70px;" oninput="document.getElementById('ref-jitter-val').innerText = (this.value*100).toFixed(0)+'%'" />
+                            <span id="ref-jitter-val" class="ref-pill" style="font-size:0.75rem; padding:1px 6px;">0%</span>
+                        </div>
+                    </div>
+                    <div class="modal-actions" style="margin-top: 0.5rem;">
+                        <button id="btn-confirm-ingest" class="btn btn-accent btn-sm" onclick="confirmReferenceIngest()" disabled>▶ 確認啟動背景萃取入庫</button>
+                    </div>
+                </div>
+
+                <!-- Active Ingestion Progress Card -->
+                <div id="ref-active-progress-card" class="glass-subcard ref-progress-monitor hidden" style="margin-top: 0.6rem;">
+                    <div class="ref-progress-header">
+                        <div class="ref-progress-title">
+                            <span class="pulse-indicator"></span>
+                            <strong id="ref-prog-file">正在萃取：《...》</strong>
+                            <span id="ref-prog-batch" class="muted-text">（批次進度：0/0 本）</span>
+                            <span id="ref-prog-queue-badge" class="ref-pill hidden" style="font-size:0.73rem; margin-left:6px;">待執行批次：0</span>
+                        </div>
+                        <span id="ref-prog-pct" class="ref-prog-pct-pill">0.0%</span>
+                    </div>
+                    <div class="ref-progress-track">
+                        <div id="ref-prog-bar" class="ref-progress-bar" style="width: 0%;"></div>
+                    </div>
+                    <div class="ref-progress-meta">
+                        <span id="ref-prog-chunks">切塊萃取：0 / 0 塊</span>
+                        <span id="ref-prog-speed" class="muted-text">後台神經網路寫作技法分析中...</span>
+                    </div>
+                    <div class="ref-progress-actions" style="display: flex; gap: 0.5rem; margin-top: 0.5rem; flex-wrap: wrap;">
+                        <button id="btn-pause-extraction" class="btn btn-warning btn-xs" onclick="pauseReferenceExtraction()">⏸️ 暫停萃取</button>
+                        <button id="btn-resume-extraction" class="btn btn-accent btn-xs hidden" onclick="resumeReferenceExtraction()">▶️ 繼續萃取</button>
+                        <button id="btn-cancel-extraction" class="btn btn-danger btn-xs" onclick="cancelReferenceExtraction()">⏹️ 取消萃取</button>
+                        <button id="btn-ref-unload-pause" class="btn btn-glass btn-xs" onclick="unloadModelAndPauseJobs()" style="margin-left:auto;">🛑 卸載模型並暫停</button>
+                    </div>
+                </div>
+
+                <!-- Macro Pacing Extraction Visual Progress Card -->
+                <div id="ref-pacing-progress-card" class="glass-subcard ref-pacing-monitor hidden" style="margin-top: 0.6rem; border: 1px solid rgba(56, 189, 248, 0.3); background: rgba(56, 189, 248, 0.05);">
+                    <div class="ref-progress-header">
+                        <div class="ref-progress-title">
+                            <span class="pulse-indicator pulse-pacing"></span>
+                            <strong id="ref-pacing-prog-file">情節規劃分析：《...》</strong>
+                            <span id="ref-pacing-prog-phase" class="muted-text">（正在提煉波浪曲線）</span>
+                        </div>
+                        <span id="ref-pacing-prog-pct" class="ref-prog-pct-pill" style="color: #38bdf8; border-color: rgba(56, 189, 248, 0.3);">0.0%</span>
+                    </div>
+                    <div class="ref-progress-track">
+                        <div id="ref-pacing-prog-bar" class="ref-progress-bar ref-pacing-bar" style="width: 0%;"></div>
+                    </div>
+                    <div class="ref-progress-meta">
+                        <span id="ref-pacing-prog-detail" class="muted-text">正在提煉小說宏觀情節推演波浪...</span>
+                    </div>
+                </div>
+
+                <!-- Ingested Books Asset List Subcard -->
+                <div class="glass-subcard" style="margin-top: 0.6rem;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.35rem;">
+                        <h4 style="margin:0;">已入庫歷史書籍資產列表</h4>
+                        <button class="btn btn-glass btn-xs" onclick="loadReferenceBooks()">↻ 重新整理列表</button>
+                    </div>
+                    <div id="ref-books-list-box" class="snapshot-table-wrap ref-books-wrap">
+                        <div class="muted-text" style="padding: 12px; text-align: center;">尚無已入庫之參考書籍。請由上方選擇檔案上傳。</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: Entries Detail & Manual Management -->
+            <div id="ref-tab-entries" class="ref-tab-content hidden">
+                <!-- Search & Filters Toolbar -->
+                <div class="ref-entries-toolbar">
+                    <input type="text" id="ref-search-input" class="ref-search-box" placeholder="🔍 搜尋技法描述或原文關鍵字..." oninput="debounceSearchEntries()" />
+                    <select id="ref-source-filter" class="ref-filter-select" onchange="loadReferenceEntries(1)">
+                        <option value="">全部書籍來源</option>
+                    </select>
+                    <button class="btn btn-glass btn-sm" onclick="clearEntryFilters()">重設篩選</button>
+                </div>
+
+                <!-- Hot Tag Cloud Row -->
+                <div class="ref-tag-cloud-row" style="margin-top: 0.4rem;">
+                    <span class="ref-tag-cloud-label">快速標籤篩選：</span>
+                    <div id="ref-hot-tags-box" class="ref-hot-tags-wrap"><span class="muted-text">尚無標籤數據</span></div>
+                </div>
+
+                <!-- Entries Card List -->
+                <div id="ref-entries-list-box" class="ref-entries-scroll-area" style="margin-top: 0.4rem;">
+                    <div class="muted-text" style="padding: 24px; text-align: center;">查無符合條件的技法條目。</div>
+                </div>
+
+                <!-- Pagination Bar -->
+                <div class="ref-pagination-bar">
+                    <button id="ref-btn-prev-page" class="btn btn-glass btn-xs" onclick="prevEntriesPage()" disabled>◀ 上一頁</button>
+                    <span id="ref-page-info" class="muted-text">第 1 / 1 頁（共 0 則條目）</span>
+                    <button id="ref-btn-next-page" class="btn btn-glass btn-xs" onclick="nextEntriesPage()" disabled>下一頁 ▶</button>
+                </div>
+            </div>
+
+            <!-- TAB 3: Global Tag Assets, 2D Cluster Map & AI Maintenance (Read-only + AI) -->
+            <div id="ref-tab-assets" class="ref-tab-content hidden">
+                <!-- Tag Assets Metric Cards Grid -->
+                <div class="ref-assets-metrics-grid">
+                    <div class="score-card">
+                        <span class="muted-text">標籤總量</span>
+                        <strong id="ref-asset-total-unique" style="font-size: 1.15rem; color: var(--accent-blue);">0</strong>
+                    </div>
+                    <div class="score-card">
+                        <span class="muted-text">全庫總引用頻次</span>
+                        <strong id="ref-asset-total-usages" style="font-size: 1.15rem; color: #10b981;">0</strong>
+                    </div>
+                    <div class="score-card">
+                        <span class="muted-text">流派標籤 (主題:子題)</span>
+                        <strong id="ref-asset-genre-count" style="font-size: 1.15rem; color: #8b5cf6;">0</strong>
+                    </div>
+                    <div class="score-card">
+                        <span class="muted-text">通用文學技法</span>
+                        <strong id="ref-asset-technique-count" style="font-size: 1.15rem; color: #ec4899;">0</strong>
+                    </div>
+                    <div class="score-card">
+                        <span class="muted-text">題材群數 / 孤島雜訊</span>
+                        <div style="display:flex; align-items:baseline; justify-content:space-between;">
+                            <strong id="ref-asset-clusters-count" style="font-size: 1.15rem; color: #f59e0b;">0</strong>
+                            <span class="muted-text" style="font-size:0.75rem;">孤島: <strong id="ref-asset-outliers-count" style="color:#ef4444;">0</strong></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI Automated Tag Maintenance & Progress Monitor -->
+                <div class="glass-subcard" style="margin-top: 0.5rem;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                        <div>
+                            <strong>⚡ AI 全庫標籤智慧整頓與規格化</strong>
+                            <div class="muted-text" style="font-size:0.75rem;">由本地神經網路（Qwen2.5）自動掃描全庫標籤，執行流派階層規範化、近義詞聚類合併與雜訊清理。</div>
+                        </div>
+                        <button id="btn-auto-clean-tags" class="btn btn-primary btn-sm" onclick="triggerAutoCleanTags()">
+                            ⚡ 啟動 AI 智慧整頓
+                        </button>
+                    </div>
+                    <!-- AI Cleaning Dynamic Progress Bar -->
+                    <div id="ref-ai-clean-progress" class="ref-progress-monitor hidden" style="margin-top: 0.5rem; padding: 0.6rem 0.8rem; border-radius: 12px;">
+                        <div class="ref-progress-header">
+                            <div class="ref-progress-title">
+                                <span class="pulse-indicator"></span>
+                                <strong id="ref-ai-clean-stage">AI 標籤整頓執行中...</strong>
+                            </div>
+                            <span id="ref-ai-clean-pct" class="ref-prog-pct-pill">0%</span>
+                        </div>
+                        <div class="ref-progress-track" style="margin: 4px 0;">
+                            <div id="ref-ai-clean-bar" class="ref-progress-bar" style="width: 0%;"></div>
+                        </div>
+                        <div class="ref-progress-meta">
+                            <span id="ref-ai-clean-desc" class="muted-text">正在進行語意本體論分析...</span>
+                            <span class="muted-text">自動重繪群聚圖並刷新題材庫</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2D PCA Semantic Cluster Canvas Graph -->
+                <div class="glass-subcard" style="margin-top: 0.5rem;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom: 0.5rem;">
+                        <div>
+                            <h4 style="margin:0;">🌌 512 維語意座標星圖（等向投影 · 防碰撞鬆弛）</h4>
+                            <span class="muted-text" style="font-size:0.74rem;">🖱️ 滾輪無級縮放 · 拖曳平移 · 點擊圖例高亮分群 · 游標懸停檢視細節</span>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <div id="ref-cluster-legend" class="ref-cluster-legend"></div>
+                            <button class="btn btn-glass btn-xs" onclick="resetClusterCanvasView()" title="重置視角與縮放">🎯 重置視角</button>
+                        </div>
+                    </div>
+                    <div class="ref-canvas-wrap" id="ref-canvas-wrap">
+                        <canvas id="ref-tag-cluster-canvas"></canvas>
+                        <div id="ref-canvas-tooltip" class="ref-canvas-tooltip hidden"></div>
+                        <div class="ref-canvas-toolbar" style="position:absolute; bottom:12px; right:12px; display:flex; gap:6px; z-index:10;">
+                            <button class="btn btn-glass btn-xs" onclick="zoomClusterCanvas(1.3)" title="放大">➕</button>
+                            <button class="btn btn-glass btn-xs" onclick="zoomClusterCanvas(0.77)" title="縮小">➖</button>
+                            <button class="btn btn-glass btn-xs" onclick="resetClusterCanvasView()" title="重置視角">↺ 重置</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Read-only Tags Asset Breakdown -->
+                <div class="glass-subcard" style="margin-top: 0.5rem;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.35rem;">
+                        <h4 style="margin:0;">📋 全庫標籤資產分群檢視（唯讀查閱）</h4>
+                        <span class="muted-text" style="font-size:0.74rem;">純資產數據檢視，不提供手動修改</span>
+                    </div>
+                    <div id="ref-assets-tags-list" class="ref-all-tags-list-box" style="max-height: 120px;"><span class="muted-text">尚無標籤資產數據</span></div>
+                </div>
+            </div>
+
+            <!-- TAB 4: Macro Pacing Templates Workbench -->
+            <div id="ref-tab-pacing" class="ref-tab-content hidden">
+                <!-- Pacing Selection & Controls Toolbar -->
+                <div class="glass-subcard" style="margin-bottom: 0.5rem;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.6rem;">
+                        <div style="display:flex; align-items:center; gap:0.6rem;">
+                            <label style="font-weight:600; font-size:0.88rem;">選擇情節波浪範本：</label>
+                            <select id="ref-pacing-select" class="ref-filter-select" style="min-width:260px;" onchange="onSelectPacingTemplate()">
+                                <option value="">(尚未萃取任何情節規劃範本)</option>
+                            </select>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:0.5rem;">
+                            <button class="btn btn-glass btn-xs" onclick="openBlendPacingModal()">🧬 範本加權混血</button>
+                            <button class="btn btn-accent btn-xs" onclick="savePacingStageOverrides()">💾 儲存節點覆寫</button>
+                            <button class="btn btn-glass btn-xs text-danger" onclick="deleteCurrentPacingTemplate()">🗑️ 刪除範本</button>
+                        </div>
+                    </div>
+                    <!-- Template Metadata Row -->
+                    <div id="ref-pacing-meta-banner" style="display:flex; gap:1.2rem; margin-top:0.5rem; font-size:0.82rem; color:var(--text-secondary); flex-wrap:wrap; align-items:center;">
+                        <span>流派原型：<strong id="pacing-meta-archetype" style="color:var(--text-primary);">-</strong></span>
+                        <span>題材：<strong id="pacing-meta-genre" style="color:var(--text-primary);">-</strong></span>
+                        <span>階段數：<strong id="pacing-meta-stages" style="color:var(--text-primary);">-</strong></span>
+                        <div id="pacing-meta-tags" style="display:flex; gap:0.3rem; flex-wrap:wrap;"></div>
+                    </div>
+                </div>
+
+                <!-- Canvas Visualizer Subcard -->
+                <div class="glass-subcard">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.35rem;">
+                        <h4 style="margin:0;">📈 宏觀波浪折線動力學（0%～100% 全卷進度曲線）</h4>
+                        <div style="display:flex; gap:1rem; font-size:0.8rem; align-items:center;">
+                            <span style="color:#ef4444; font-weight:600;">● 衝突張力 (Tension)</span>
+                            <span style="color:#3b82f6; font-weight:600;">● 推進幅度 (Progress)</span>
+                            <span style="color:#10b981; font-weight:600;">● 事件密度 (Density)</span>
+                            <span class="muted-text" style="font-size:0.75rem;">💡 可直接在畫布拖曳控制點覆寫</span>
+                        </div>
+                    </div>
+                    <div class="ref-canvas-wrap" style="position:relative; background:rgba(0,0,0,0.25); border-radius:8px; padding:0.5rem;">
+                        <canvas id="ref-pacing-canvas" width="910" height="260" style="width:100%; height:260px; display:block; cursor:crosshair;"></canvas>
+                        <div id="ref-pacing-tooltip" class="ref-canvas-tooltip hidden" style="position:absolute;"></div>
+                    </div>
+                </div>
+
+                <!-- Stage Milestones List Subcard -->
+                <div class="glass-subcard" style="margin-top: 0.5rem;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.35rem;">
+                        <h4 style="margin:0;">🎯 分卷各階段里程碑與抽象任務（Milestones）</h4>
+                        <span class="muted-text" style="font-size:0.75rem;">支援直接修改目標數值（1～5）</span>
+                    </div>
+                    <div id="ref-pacing-stages-table-box" class="snapshot-table-wrap" style="max-height: 200px;">
+                        <div style="padding:1rem; text-align:center; color:var(--text-secondary);">尚未選擇範本（請先萃取或混血合成情節規劃）</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 3B: Blend Pacing Templates Modal -->
+    <div id="modal-blend-pacing" class="modal-backdrop hidden" style="z-index: 1050;">
+        <div class="modal-card" style="max-width: 520px;">
+            <div class="panel-header">
+                <div>
+                    <span class="eyebrow-tag">HYBRID PACING MERGER</span>
+                    <h3>🧬 多範本加權混血合成</h3>
+                </div>
+                <button class="btn btn-sm btn-glass" onclick="closeModal('modal-blend-pacing')">✕</button>
+            </div>
+            <div style="padding: 1rem 0; display:flex; flex-direction:column; gap:0.9rem;">
+                <div>
+                    <label style="font-size:0.85rem; font-weight:600;">母本 A（基底骨幹）：</label>
+                    <select id="blend-select-a" class="ref-filter-select" style="width:100%; margin-top:0.3rem;"></select>
+                </div>
+                <div>
+                    <label style="font-size:0.85rem; font-weight:600;">母本 B（融合特徵）：</label>
+                    <select id="blend-select-b" class="ref-filter-select" style="width:100%; margin-top:0.3rem;"></select>
+                </div>
+                <div>
+                    <div style="display:flex; justify-content:space-between;">
+                        <label style="font-size:0.85rem; font-weight:600;">融合權重：</label>
+                        <span id="blend-ratio-label" class="ref-pill" style="font-size:0.8rem;">母本 A (50%) : 母本 B (50%)</span>
+                    </div>
+                    <input type="range" id="blend-weight-slider" min="0.1" max="0.9" step="0.05" value="0.5" style="width:100%; margin-top:0.4rem;" oninput="updateBlendSliderLabel()" />
+                </div>
+                <div>
+                    <label style="font-size:0.85rem; font-weight:600;">新範本自訂名稱（留空自動生成）：</label>
+                    <input type="text" id="blend-new-name" class="ref-filter-select" style="width:100%; margin-top:0.3rem;" placeholder="如：凡人穩健 x 詭秘雙峰混血" />
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-glass" onclick="closeModal('modal-blend-pacing')">取消</button>
+                <button class="btn btn-accent" onclick="confirmBlendPacing()">開始混血合成</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 4: 50-Chapter Acceptance Report -->
+    <div id="modal-acceptance" class="modal-backdrop hidden">
+        <div class="modal-card modal-wide">
+            <div class="panel-header">
+                <div>
+                    <span class="eyebrow-tag">QUALITY GATE VERIFICATION</span>
+                    <h3>50 章壓測與雙重品質閘門驗收報告</h3>
+                </div>
+                <button class="btn btn-sm btn-glass" onclick="closeModal('modal-acceptance')">✕</button>
+            </div>
+            <div id="acceptance-report-box" class="snapshot-table-wrap"></div>
+        </div>
+    </div>
+
+    <!-- Modal 5: Environment Check & Model Download Center -->
+    <div id="modal-env" class="modal-backdrop hidden">
+        <div class="modal-card modal-env-compact">
+            <div class="panel-header">
+                <div>
+                    <span class="eyebrow-tag">LOCAL AI ENGINE & GGUF MODELS</span>
+                    <h3>模型環境與推論部署</h3>
+                </div>
+                <button class="btn btn-sm btn-glass" onclick="closeModal('modal-env')">✕</button>
+            </div>
+            <div id="env-status-box" class="env-status-list">正在讀取環境狀態...</div>
+            <details class="env-advanced-fold">
+                <summary>⚙️ 進階下載設定 (選填)</summary>
+                <div class="two-col-grid" style="gap: 0.6rem; margin-top: 0.45rem;">
+                    <label>GGUF Repo ID
+                        <input type="text" id="env-gguf-repo" value="bartowski/Qwen2.5-7B-Instruct-GGUF" />
+                    </label>
+                    <label>GGUF 檔案名稱
+                        <input type="text" id="env-gguf-file" value="Qwen2.5-7B-Instruct-Q5_K_M.gguf" />
+                    </label>
+                </div>
+            </details>
+            <!-- Model Download Progress Bar (Hidden; per-component progress bars are rendered inside cards) -->
+            <div id="env-progress-container" class="env-progress-wrap hidden" style="display: none;">
+                <div class="env-progress-header">
+                    <span id="env-progress-label" class="env-progress-text">⏳ 正在處理模型部署...</span>
+                    <span id="env-progress-percent" class="env-progress-percent">0%</span>
+                </div>
+                <div class="env-progress-bar-bg">
+                    <div id="env-progress-bar-fill" class="env-progress-bar-fill indeterminate"></div>
+                </div>
+            </div>
+            <div id="env-download-banner" class="hidden" style="display: none;"></div>
+            <div class="modal-actions" style="margin-top: 0.65rem; justify-content: space-between; align-items: center;">
+                <div class="inline-btn-group">
+                    <button class="btn btn-glass btn-sm" onclick="refreshEnvModalStatus()">↻ 重新整理</button>
+                </div>
+                <div class="inline-btn-group" style="gap: 0.5rem;">
+                    <button id="btn-unload-model-pause" class="btn btn-warning btn-sm" onclick="unloadModelAndPauseJobs()">🛑 卸載模型並暫停工作</button>
+                    <button id="btn-deploy-all-env" class="btn btn-primary btn-sm" onclick="triggerDeployAllEnvironments()">⚡ 一鍵檢查並部署所有環境</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 6: Multi-Format Export -->
+    <div id="modal-export" class="modal-backdrop hidden">
+        <div class="modal-card">
+            <div class="panel-header">
+                <div>
+                    <span class="eyebrow-tag">PUBLISHING EXPORT</span>
+                    <h3>多格式一鍵匯出成書</h3>
+                </div>
+                <button class="btn btn-sm btn-glass" onclick="closeModal('modal-export')">✕</button>
+            </div>
+            <label>匯出範圍：
+                <select id="exp-scope" onchange="onExportScopeChange()">
+                    <option value="ALL">全書匯出</option>
+                    <option value="VOLUME">單卷匯出</option>
+                    <option value="RANGE">指定章節範圍</option>
+                </select>
+            </label>
+            <div id="exp-vol-row" class="hidden">
+                <label>指定卷號：<input type="number" id="exp-vol-num" value="1" min="1" /></label>
+            </div>
+            <div id="exp-range-row" class="two-col-grid hidden">
+                <label>起始章：<input type="number" id="exp-start-ch" value="1" min="1" /></label>
+                <label>結束章：<input type="number" id="exp-end-ch" value="10" min="1" /></label>
+            </div>
+            <label>檔案合併模式：
+                <select id="exp-merge-mode">
+                    <option value="SINGLE_FILE">全書單一合併檔</option>
+                    <option value="PER_VOLUME">分卷獨立檔案</option>
+                </select>
+            </label>
+            <fieldset class="glass-fieldset">
+                <legend>勾選匯出格式</legend>
+                <label><input type="checkbox" class="exp-fmt" value="md" checked /> Markdown (.md)</label>
+                <label><input type="checkbox" class="exp-fmt" value="txt" checked /> 純文字 (.txt)</label>
+                <label><input type="checkbox" class="exp-fmt" value="html" checked /> 獨立網頁 (.html)</label>
+                <label><input type="checkbox" class="exp-fmt" value="epub" checked /> 電子書 (.epub)</label>
+                <label><input type="checkbox" class="exp-fmt" value="docx" checked /> Word 出版稿 (.docx)</label>
+            </fieldset>
+            <div id="exp-result-box" class="muted-text"></div>
+            <div class="modal-actions">
+                <button class="btn btn-glass" onclick="closeModal('modal-export')">取消</button>
+                <button class="btn btn-primary" onclick="submitNovelExport()">立即匯出至 exports/</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 5: Rename Novel Project -->
+    <div id="modal-rename-project" class="modal-backdrop hidden">
+        <div class="modal-card">
+            <div class="panel-header">
+                <div>
+                    <span class="eyebrow-tag">RENAME PROJECT</span>
+                    <h3>重新命名小說專案</h3>
+                </div>
+                <button class="btn btn-sm btn-glass" onclick="closeModal('modal-rename-project')">✕</button>
+            </div>
+            <input type="hidden" id="rename-project-id" />
+            <label>新小說名稱：
+                <input type="text" id="rename-project-title" placeholder="請輸入新的小說名稱" />
+            </label>
+            <div class="modal-actions">
+                <button class="btn btn-glass" onclick="closeModal('modal-rename-project')">取消</button>
+                <button class="btn btn-primary" onclick="submitRenameProject()">確認儲存名稱</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 6: AI Blueprint Generation Loading Overlay -->
+    <div id="modal-blueprint-generating" class="loading-modal-backdrop hidden">
+        <div class="loading-modal-card">
+            <div class="loading-modal-spinner"></div>
+            <div class="loading-modal-title" id="loading-modal-title">AI 正在衍生小說宏觀藍圖...</div>
+            <div class="loading-modal-desc" id="loading-modal-desc">
+                正在深度解析問答歷史，推演世界底層法則、勢力網絡與 500 萬字階段配速大綱，請稍候（約需 20～40 秒）...
+            </div>
+        </div>
+    </div>
+
+    <div id="global-toast" class="toast hidden"></div>
+
+    <!-- Modular Frontend Application Architecture -->
+    <script src="/static/js/state.js?v=modular-v1"></script>
+    <script src="/static/js/projects.js?v=modular-v1"></script>
+    <script src="/static/js/wizard.js?v=modular-v1"></script>
+    <script src="/static/js/review_workbench.js?v=modular-v1"></script>
+    <script src="/static/js/warroom.js?v=modular-v1"></script>
+    <script src="/static/js/environment.js?v=modular-v1"></script>
+    <script src="/static/js/reference.js?v=modular-v1"></script>
+    <script src="/static/js/main.js?v=modular-v1"></script>
+</body>
+</html>

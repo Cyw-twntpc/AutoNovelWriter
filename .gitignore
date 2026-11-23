@@ -1,0 +1,42 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Pytest & coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Large model binaries and cache
+models/*.gguf
+models/**/.cache/
+bin/*.exe
+bin/*.dll
+
+# SQLite databases, snapshots, logs and exports
+data/*.db
+data/*.db-wal
+data/*.db-shm
+data/*.json
+data/*.txt
+data/snapshots/
+data/exports/
+data/logs/
+data/cache/
+data/ref_uploads/
+data/projects/**/*.db
+data/projects/**/snapshots/
+data/projects/**/exports/
+/novel_project.db
+bin/*.zip.incomplete
+
+# OS generated files
+.DS_Store
+Thumbs.db
