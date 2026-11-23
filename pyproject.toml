@@ -7,6 +7,7 @@ name = "autonovel"
 version = "1.0.0"
 description = "Autonomous long-form Chinese novel writing system with dual SQLite consistency engine and 16k context router"
 readme = "README.md"
+license = { file = "LICENSE" }
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.110.0",

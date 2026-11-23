@@ -3,40 +3,57 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-# Pytest & coverage
+# Packaging & distribution
+build/
+dist/
+*.egg-info/
+.eggs/
+*.egg
+
+# Pytest, coverage & linters
 .pytest_cache/
+.ruff_cache/
+.mypy_cache/
 .coverage
 htmlcov/
 
-# Virtual environments
+# Virtual environments & secrets
 .venv/
 venv/
 ENV/
 env/
+.env
+.env.*
 
-# Large model binaries and cache
+# Large model binaries and Hugging Face caches
+# Note: models/bge-small-zh-v1.5/{tokenizer.json,onnx/model.onnx} are intentionally tracked for offline CPU embedding & tests
 models/*.gguf
+models/*.bin
+models/*.safetensors
+models/.cache/
 models/**/.cache/
+
+# Local llama.cpp binaries and download archives
+# Note: bin/LICENSE-LLVM-OpenMP is intentionally tracked
 bin/*.exe
 bin/*.dll
-
-# SQLite databases, snapshots, logs and exports
-data/*.db
-data/*.db-wal
-data/*.db-shm
-data/*.json
-data/*.txt
-data/snapshots/
-data/exports/
-data/logs/
-data/cache/
-data/ref_uploads/
-data/projects/**/*.db
-data/projects/**/snapshots/
-data/projects/**/exports/
-/novel_project.db
+bin/*.so
+bin/*.dylib
+bin/*.zip
 bin/*.zip.incomplete
+bin/*.tar.gz
 
-# OS generated files
+# Runtime data, SQLite databases, snapshots, logs, uploads, and exports
+data/
+/*.db
+/*.db-wal
+/*.db-shm
+
+# IDE & OS generated files
+.vscode/
+.idea/
+*.swp
+*.swo
 .DS_Store
 Thumbs.db
+Desktop.ini
